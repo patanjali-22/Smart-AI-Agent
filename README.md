@@ -205,6 +205,44 @@ Health check endpoint.
 
 ---
 
+## ☁️ Cloud Deployment
+
+This project is deployment-ready with configs for **Render** (backend) and **Streamlit Cloud** (frontend).
+
+### Backend → Render (Free Tier)
+
+1. Go to [render.com](https://render.com) and connect your GitHub repo
+2. Create a **New Web Service** → select this repository
+3. Render will auto-detect the `render.yaml` blueprint, or configure manually:
+   - **Build Command**: `pip install -r requirements.txt`
+   - **Start Command**: `cd backend && uvicorn main:app --host 0.0.0.0 --port $PORT`
+4. Add your environment variables in the Render dashboard:
+   - `GROQ_API_KEY`
+   - `PINECONE_API_KEY`
+   - `PINECONE_ENVIRONMENT`
+   - `TAVILY_API_KEY`
+5. Deploy — your backend will be live at `https://your-app.onrender.com`
+
+### Frontend → Streamlit Cloud (Free)
+
+1. Go to [share.streamlit.io](https://share.streamlit.io)
+2. Connect your GitHub repo and select `frontend/app.py` as the main file
+3. Add secrets in the Streamlit Cloud dashboard:
+   - `FASTAPI_BASE_URL = https://your-app.onrender.com` (your Render backend URL)
+4. Deploy — your frontend will be live at `https://your-app.streamlit.app`
+
+### Using Docker
+
+```bash
+# Build the image
+docker build -t smart-ai-agent .
+
+# Run the container
+docker run -p 8000:8000 --env-file .env smart-ai-agent
+```
+
+---
+
 ## 🔮 Future Improvements
 
 - Token-by-token streaming for real-time responses
