@@ -202,3 +202,27 @@ def rag_node(state: AgentState,config:RunnableConfig) -> AgentState:
         "route": next_route,
         "web_search_enabled": web_search_enabled # Pass the flag along
     }
+
+# --- Node 3: web search ---
+def web_node(state: AgentState,config:RunnableConfig) -> AgentState:
+    print("\n--- Entering web_node ---")
+    query = next((m.content for m in reversed(state["messages"]) if isinstance(m, HumanMessage)), "")
+    
+    # Check if web search is actually enabled before performing it
+    # MODIFIED: Get web_search_enabled directly from the config
+    web_search_enabled = config.get("configurable", {}).get("web_search_enabled", True) # <-- CHANGED LINE
+    print(f"Router received web search info : {web_search_enabled}")
+    if not web_search_enabled:
+        print("Web search node entered but web search is disabled. Skipping actual search.")
+        return {**state, "web": "Web search was disabled by the user.", "route": "answer"}
+
+    print(f"Web search query: {query}")
+    snippets = web_search_tool.invoke(query)
+    
+    if snippets.startswith("WEB_ERROR::"):
+        print(f"Web Error: {snippets}. Proceeding to answer with limited info.")
+        return {**state, "web": "", "route": "answer"}
+
+    print(f"Web snippets retrieved: {snippets[:200]}...")
+    print("--- Exiting web_node ---")
+    return {**state, "web": snippets, "route": "answer"}
