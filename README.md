@@ -2,7 +2,42 @@
 
 An intelligent AI agent that answers questions by combining **Retrieval-Augmented Generation (RAG)** with **real-time web search**. Built with a modular architecture using FastAPI, Streamlit, and LangGraph — giving users full control and transparency over how answers are generated.
 
-![Architecture](assets/architecture_diagram.png)
+```mermaid
+graph TD
+    User["👤 User"] --> Frontend
+
+    subgraph Frontend ["Streamlit Frontend"]
+        A["Chat UI"]
+        B["PDF Upload"]
+        C["Web Search Toggle"]
+        D["Agent Trace Viewer"]
+    end
+
+    Frontend -->|"HTTP POST /chat/"| Backend
+    Frontend -->|"HTTP POST /upload-document/"| Backend
+
+    subgraph Backend ["FastAPI Backend"]
+        E["REST API Endpoints"]
+        F["Request Handling"]
+    end
+
+    Backend --> Agent
+
+    subgraph Agent ["LangGraph Agent Core"]
+        Router["Router Node"] -->|"route = rag"| RAG["RAG Lookup Node"]
+        Router -->|"route = web"| Web["Web Search Node"]
+        Router -->|"route = answer"| Answer["Answer Node"]
+        RAG -->|"sufficient"| Answer
+        RAG -->|"not sufficient"| Web
+        Web --> Answer
+    end
+
+    RAG --> Pinecone["🟦 Pinecone - Vector DB"]
+    RAG --> HF["🟡 HuggingFace - Embeddings"]
+    Web --> Tavily["🟢 Tavily - Web Search API"]
+    Answer --> Groq["🟣 Groq - Llama 3 70B"]
+    Router --> Groq
+```
 
 ---
 
