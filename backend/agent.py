@@ -11,11 +11,9 @@ from langgraph.graph import StateGraph, END
 from langgraph.checkpoint.memory import MemorySaver
 from langchain_core.runnables import RunnableConfig
 
-# Import API keys from config
 from config import GROQ_API_KEY, TAVILY_API_KEY
 from vectorstore import get_retriever
 
-# --- Tools ---
 os.environ["TAVILY_API_KEY"] = TAVILY_API_KEY
 os.environ["GROQ_API_KEY"] = GROQ_API_KEY
 tavily = TavilySearch(max_results=3, topic="general")
@@ -47,3 +45,24 @@ def rag_search_tool(query: str) -> str:
         return "\n\n".join(d.page_content for d in docs) if docs else ""
     except Exception as e:
         return f"RAG_ERROR::{e}"
+
+# --- Pydantic schemas for structured output ---
+class RouteDecision(BaseModel):
+    route: Literal["rag", "web", "answer", "end"]
+    reply: str | None = Field(None, description="Filled only when route == 'end'")
+
+class RagJudge(BaseModel):
+    sufficient: bool = Field(..., description="True if retrieved information is sufficient to answer the user's question, False otherwise.")
+
+# --- LLM instances with structured output where needed ---
+router_llm = ChatGroq(model="llama3-70b-8192", temperature=0).with_structured_output(RouteDecision)
+judge_llm = ChatGroq(model="llama3-70b-8192", temperature=0).with_structured_output(RagJudge)
+answer_llm = ChatGroq(model="llama3-70b-8192", temperature=0.7)
+
+# --- Shared state type ---
+class AgentState(TypedDict, total=False):
+    messages: List[BaseMessage]
+    route: Literal["rag", "web", "answer", "end"]
+    rag: str
+    web: str
+    web_search_enabled: bool
