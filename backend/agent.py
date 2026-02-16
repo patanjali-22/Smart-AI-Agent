@@ -226,3 +226,40 @@ def web_node(state: AgentState,config:RunnableConfig) -> AgentState:
     print(f"Web snippets retrieved: {snippets[:200]}...")
     print("--- Exiting web_node ---")
     return {**state, "web": snippets, "route": "answer"}
+
+# --- Node 4: final answer ---
+def answer_node(state: AgentState) -> AgentState:
+    print("\n--- Entering answer_node ---")
+    user_q = next((m.content for m in reversed(state["messages"]) if isinstance(m, HumanMessage)), "")
+    
+    ctx_parts = []
+    if state.get("rag"):
+        ctx_parts.append("Knowledge Base Information:\n" + state["rag"])
+    if state.get("web"):
+        # If web search was disabled, the 'web' field might contain a message like "Web search was disabled..."
+        # We should only include actual search results here.
+        if state["web"] and not state["web"].startswith("Web search was disabled"):
+            ctx_parts.append("Web Search Results:\n" + state["web"])
+    
+    context = "\n\n".join(ctx_parts)
+    if not context.strip():
+        context = "No external context was available for this query. Try to answer based on general knowledge if possible."
+
+    prompt = f"""Please answer the user's question using the provided context.
+If the context is empty or irrelevant, try to answer based on your general knowledge.
+
+Question: {user_q}
+
+Context:
+{context}
+
+Provide a helpful, accurate, and concise response based on the available information."""
+
+    print(f"Prompt sent to answer_llm: {prompt[:500]}...")
+    ans = answer_llm.invoke([HumanMessage(content=prompt)]).content
+    print(f"Final answer generated: {ans[:200]}...")
+    print("--- Exiting answer_node ---")
+    return {
+        **state,
+        "messages": state["messages"] + [AIMessage(content=ans)]
+    }
