@@ -1,196 +1,189 @@
-# 🤖 Smart AI Agent: RAG, Web Search & LangGraph
+# 🤖 Smart AI Agent — RAG + Web Search powered by LangGraph
 
-![Smart AI Agent Thumbnail](assets/agentBot.png)
+An intelligent AI agent that answers questions by combining **Retrieval-Augmented Generation (RAG)** with **real-time web search**. Built with a modular architecture using FastAPI, Streamlit, and LangGraph — giving users full control and transparency over how answers are generated.
 
-🔗 **[Download Project PDF](assets/agentBot.pdf)**
-
----
-
-This repository contains the code for a sophisticated AI Agent application capable of answering user queries by intelligently leveraging both a private, custom knowledge base (using Retrieval-Augmented Generation - RAG) and real-time web search. Users have granular control over the web search feature, enhancing flexibility and transparency.
+![Architecture](assets/architecture_diagram.png)
 
 ---
 
-## ✨ Key Features
+## ✨ Features
 
-- **Hybrid AI & Intelligent Routing**: Combines internal RAG knowledge with real-time web search, dynamically selecting the best information source for each query.
-
-- **User-Controlled Web Access**: Provides a UI toggle to enable or disable web search, allowing users to choose between internal-only knowledge or broader internet access.
-
-- **Transparent AI Workflow (Agent Trace)**: Offers a detailed, step-by-step trace of the agent's internal thought process, including routing decisions, RAG sufficiency verdicts, and information retrieval summaries.
-
-- **Contextual RAG Sufficiency Judgment**: Employs an LLM to critically assess if retrieved RAG content is sufficient to answer a query, preventing incomplete responses and prompting further search if needed.
-
-- **Dynamic Knowledge Ingestion (PDF Upload)**: Users can upload PDF documents directly, which are automatically processed, embedded, and added to the agent's Pinecone knowledge base.
-
-- **Modular & Extensible Design**: Clean, layered architecture (FastAPI, LangGraph, Streamlit) makes it easy to understand, debug, and expand.
-
-- **Persistent Conversation Memory**: LangGraph's checkpointing maintains conversation context across multiple turns.
+- **Intelligent Query Routing** — Automatically decides whether to search internal documents, the web, or answer directly
+- **RAG with Pinecone** — Upload PDFs and query them instantly using vector similarity search
+- **Live Web Search** — Falls back to Tavily web search when internal knowledge is insufficient
+- **Sufficiency Judgment** — An LLM judge evaluates if RAG results actually answer the question before responding
+- **User-Controlled Web Toggle** — Enable or disable web search from the UI at any time
+- **Agent Trace Viewer** — See exactly how the agent routed your query, what it retrieved, and why
+- **Conversation Memory** — LangGraph checkpointing maintains context across multiple turns
+- **PDF Upload** — Drag-and-drop PDF ingestion into the knowledge base
 
 ---
 
-## 🚀 High-Level Architecture
+## 🏗️ Architecture
 
-### 🧩 Layers Overview:
+The application is split into three layers:
 
-- **User Interface (UI)**: Streamlit app for interaction.
-- **API Layer**: FastAPI backend that receives and handles requests.
-- **Agent Core**: LangGraph-powered AI logic with routing and tools.
-- **Knowledge Base**: Pinecone vector DB + HuggingFace embeddings.
-- **External Tools**: Groq LLM, Tavily Search API.
+| Layer | Technology | Role |
+|-------|-----------|------|
+| **Frontend** | Streamlit | Chat UI, file upload, settings, trace viewer |
+| **Backend** | FastAPI | REST API, request handling, document processing |
+| **Agent Core** | LangGraph | Query routing, RAG retrieval, web search, answer generation |
 
----
-
-## 📦 Core Modules Structure
+### Agent Workflow
 
 ```
-agentBot/
-├── frontend/
-│   ├── app.py                  # Streamlit entry point
-│   ├── ui_components.py       # Chat UI, toggle, trace
-│   ├── backend_api.py         # API communication
-│   ├── session_manager.py     # Streamlit state management
-│   └── config.py              # Frontend config
-│
+User Query → Router → RAG Lookup → Sufficiency Check → Answer
+                 ↓                        ↓ (insufficient)
+            Web Search ←─────────────────┘
+                 ↓
+              Answer
+```
+
+The **Router** analyzes each query and picks the best path. If RAG retrieval is insufficient, a **Judge LLM** detects this and reroutes to web search automatically.
+
+---
+
+## 🧩 Project Structure
+
+```
+Smart-AI-Agent/
 ├── backend/
-│   ├── main.py                # FastAPI entry point
-│   ├── agent.py               # LangGraph AI agent workflow
-│   ├── vectorstore.py         # Pinecone RAG logic
-│   └── config.py              # API keys and env vars
+│   ├── config.py              # Environment variables and API keys
+│   ├── vectorstore.py         # Pinecone vector store + HuggingFace embeddings
+│   ├── agent.py               # LangGraph agent with 4-node state machine
+│   └── main.py                # FastAPI server with chat and upload endpoints
 │
+├── frontend/
+│   ├── config.py              # Frontend configuration
+│   ├── session_manager.py     # Streamlit session state management
+│   ├── backend_api.py         # HTTP client for backend communication
+│   ├── ui_components.py       # Reusable UI components
+│   └── app.py                 # Streamlit application entry point
 │
-├── requirements.txt          # Python dependencies
-└── .env                      # API keys (not committed)
+├── data/                      # Sample documents for RAG
+├── assets/                    # Architecture diagrams and images
+├── requirements.txt           # Python dependencies
+└── .env                       # API keys (not committed)
 ```
 
 ---
 
-## ⚙️ Technology Stack
+## ⚙️ Tech Stack
 
-- **Language**: Python 3.9+
-- **Frontend**: Streamlit
-- **Backend**: FastAPI
-- **Agent Orchestration**: LangGraph
-- **LLMs & Tools**: LangChain, Groq (Llama 3)
-- **Embeddings**: sentence-transformers/all-MiniLM-L6-v2
-- **Vector Store**: Pinecone
-- **PDF Processing**: PyPDFLoader
-- **Search Engine**: Tavily API
+| Component | Technology |
+|-----------|-----------|
+| Language | Python 3.10+ |
+| Frontend | Streamlit |
+| Backend | FastAPI + Uvicorn |
+| Agent Framework | LangGraph + LangChain |
+| LLM | Groq (Llama 3 70B) |
+| Embeddings | HuggingFace `all-MiniLM-L6-v2` (384 dims) |
+| Vector Store | Pinecone (Serverless) |
+| Web Search | Tavily Search API |
+| PDF Processing | PyPDFLoader |
 
 ---
 
-## 🛠️ Setup and Installation
+## 🚀 Getting Started
 
 ### Prerequisites
 
-- Python 3.9+
-- API Keys:
-
-  - `GROQ_API_KEY`
-  - `PINECONE_API_KEY`
-  - `TAVILY_API_KEY`
-
-- Pinecone index: `rag-index` with 384 dimensions and cosine metric
+- Python 3.10+
+- API keys for **Groq**, **Pinecone**, and **Tavily**
 
 ### Installation
 
 ```bash
-git clone https://github.com/your-username/agentBot.git
-cd rag_agent_app
-uv venv
-source .venv/bin/activate  # On Windows: .venv\Scripts\activate
-uv pip install -r requirements.txt
+git clone https://github.com/patanjali-22/Smart-AI-Agent.git
+cd Smart-AI-Agent
+python -m venv .venv
+.venv\Scripts\activate       # Windows
+pip install -r requirements.txt
 ```
 
-Create a `.env` file at project root:
+### Environment Variables
 
-```dotenv
-GROQ_API_KEY="your_groq_api_key_here"
-PINECONE_API_KEY="your_pinecone_api_key_here"
-PINECONE_ENVIRONMENT="your_pinecone_environment"
-TAVILY_API_KEY="your_tavily_api_key"
-FASTAPI_BASE_URL="http://localhost:8000"
+Create a `.env` file in the project root:
+
+```env
+GROQ_API_KEY=your_groq_api_key
+PINECONE_API_KEY=your_pinecone_api_key
+PINECONE_ENVIRONMENT=us-east-1
+TAVILY_API_KEY=your_tavily_api_key
+FASTAPI_BASE_URL=http://localhost:8000
 ```
 
----
-
-## 🏃 Running the Application
-
-### 1. Start the Backend (FastAPI)
+### Run
 
 ```bash
+# Terminal 1 — Start the backend
 cd backend
-uvicorn main:app --reload --host 0.0.0.0 --port 8000
-```
+uvicorn main:app --reload --port 8000
 
-### 2. Start the Frontend (Streamlit)
-
-```bash
-cd ..
+# Terminal 2 — Start the frontend
 streamlit run frontend/app.py
 ```
 
 ---
 
-## 🧪 API Testing with Postman
+## 📡 API Endpoints
 
-### `/upload-document/` (POST)
+### `POST /upload-document/`
 
-- **URL**: `http://localhost:8000/upload-document/`
-- **Body**: `form-data`, key=`file`, type=`File`
-- **Response**:
+Upload a PDF to the RAG knowledge base.
 
 ```json
+// Request: multipart/form-data with file field
+// Response:
 {
-  "message": "PDF 'doc.pdf' successfully uploaded and indexed.",
-  "filename": "doc.pdf",
-  "processed_chunks": 5
+  "message": "PDF 'document.pdf' successfully uploaded and indexed.",
+  "filename": "document.pdf",
+  "processed_chunks": 12
 }
 ```
 
-### `/chat/` (POST)
+### `POST /chat/`
 
-- **URL**: `http://localhost:8000/chat/`
-- **Body** (JSON):
+Send a query to the agent.
 
 ```json
+// Request:
 {
-  "session_id": "test-session-001",
-  "query": "What are the treatment of diabetes?",
+  "session_id": "abc-123",
+  "query": "What are the symptoms of diabetes?",
   "enable_web_search": true
 }
-```
 
-- **Response**:
-
-```json
+// Response:
 {
-  "response": "Your agent's answer here...",
+  "response": "The common symptoms of diabetes include...",
   "trace_events": [
-    {
-      "step": 1,
-      "node_name": "router",
-      "description": "...",
-      "event_type": "router_decision"
-    }
+    { "step": 1, "node_name": "router", "description": "Router decided: 'rag'", "event_type": "router_decision" },
+    { "step": 2, "node_name": "rag_lookup", "description": "RAG Lookup performed. Content found and deemed sufficient.", "event_type": "rag_action" }
   ]
 }
 ```
 
----
+### `GET /health`
 
-## 🚀 Future Improvements
-
-- Integrate tools: calculator, calendar, code interpreter
-- Stream LLM output token-by-token
-- Advanced RAG techniques: reranking, multi-query
-- Long-term memory database for chat history
-- User authentication & profiles
-- Enhanced UI: dark mode, animations, custom themes
+Health check endpoint.
 
 ---
 
-## 📬 Feedback & Contributions
+## 🔮 Future Improvements
 
-Feel free to open issues or PRs for suggestions, bugs, or enhancements.
+- Token-by-token streaming for real-time responses
+- Advanced RAG techniques (reranking, multi-query retrieval)
+- User authentication and conversation history persistence
+- Additional tools: calculator, code interpreter, calendar
+- Dark mode and enhanced UI animations
 
-> Built with ❤️ using LangGraph, LangChain, Groq, and Streamlit
+---
+
+## 📄 License
+
+This project is open source and available for learning and personal use.
+
+---
+
+> Built with LangGraph, LangChain, Groq, Pinecone, and Streamlit
