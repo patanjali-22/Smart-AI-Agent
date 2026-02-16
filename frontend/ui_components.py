@@ -31,3 +31,24 @@ def render_document_upload_section(fastapi_base_url: str):
             else:
                 st.warning("Please upload a PDF file before clicking 'Upload PDF'.")
     st.markdown("---")
+
+def render_agent_settings_section():
+    """
+    Renders the section for agent settings, including the web search toggle.
+    Updates the 'web_search_enabled' flag in session state.
+    """
+    st.header("Agent Settings")
+    # Checkbox to enable/disable web search, linked to session state
+    # The value is directly updated in st.session_state.web_search_enabled
+    st.session_state.web_search_enabled = st.checkbox(
+        "Enable Web Search (🌐)", 
+        value=st.session_state.web_search_enabled,
+        help="If enabled, the agent can use web search when its knowledge base is insufficient. If disabled, it will only use uploaded documents."
+    )
+    st.markdown("---")
+
+def display_chat_history():
+    """Displays all messages currently in the session state chat history."""
+    for message in st.session_state.messages:
+        with st.chat_message(message["role"]):
+            st.markdown(message["content"])
