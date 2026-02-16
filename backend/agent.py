@@ -148,3 +148,57 @@ def router_node(state: AgentState,config : RunnableConfig) -> AgentState:
     
     print("--- Exiting router_node ---")
     return out
+
+# --- Node 2: RAG lookup ---
+def rag_node(state: AgentState,config:RunnableConfig) -> AgentState:
+    print("\n--- Entering rag_node ---")
+    query = next((m.content for m in reversed(state["messages"]) if isinstance(m, HumanMessage)), "")
+    # MODIFIED: Get web_search_enabled directly from the config
+    web_search_enabled = config.get("configurable", {}).get("web_search_enabled", True) # <-- CHANGED LINE
+    print(f"Router received web search info : {web_search_enabled}")
+    print(f"RAG query: {query}")
+    chunks = rag_search_tool.invoke(query)
+    
+    if chunks.startswith("RAG_ERROR::"):
+        print(f"RAG Error: {chunks}. Checking web search enabled status.")
+        # If RAG fails, and web search is enabled, try web. Otherwise, go to answer.
+        next_route = "web" if web_search_enabled else "answer"
+        return {**state, "rag": "", "route": next_route}
+
+    if chunks:
+        print(f"Retrieved RAG chunks (first 500 chars): {chunks[:500]}...")
+    else:
+        print("No RAG chunks retrieved.")
+
+    judge_messages = [
+        ("system", (
+            "You are a judge evaluating if the **retrieved information** is **sufficient and relevant** "
+            "to fully and accurately answer the user's question. "
+            "Consider if the retrieved text directly addresses the question's core and provides enough detail."
+            "If the information is incomplete, vague, outdated, or doesn't directly answer the question, it's NOT sufficient."
+            "If it provides a clear, direct, and comprehensive answer, it IS sufficient."
+            "If no relevant information was retrieved at all (e.g., 'No results found'), it is definitely NOT sufficient."
+            "\n\nRespond ONLY with a JSON object: {\"sufficient\": true/false}"
+            "\n\nExample 1: Question: 'What is the capital of France?' Retrieved: 'Paris is the capital of France.' -> {\"sufficient\": true}"
+            "\nExample 2: Question: 'What are the symptoms of diabetes?' Retrieved: 'Diabetes is a chronic condition.' -> {\"sufficient\": false} (Doesn't answer symptoms)"
+            "\nExample 3: Question: 'How to fix error X in software Y?' Retrieved: 'No relevant information found.' -> {\"sufficient\": false}"
+        )),
+        ("user", f"Question: {query}\n\nRetrieved info: {chunks}\n\nIs this sufficient to answer the question?")
+    ]
+    verdict: RagJudge = judge_llm.invoke(judge_messages)
+    print(f"RAG Judge verdict: {verdict.sufficient}")
+    print("--- Exiting rag_node ---")
+    
+    # NEW LOGIC: Decide next route based on sufficiency AND web_search_enabled
+    if verdict.sufficient:
+        next_route = "answer"
+    else:
+        next_route = "web" if web_search_enabled else "answer" # If not sufficient, only go to web if enabled
+        print(f"RAG not sufficient. Web search enabled: {web_search_enabled}. Next route: {next_route}")
+
+    return {
+        **state,
+        "rag": chunks,
+        "route": next_route,
+        "web_search_enabled": web_search_enabled # Pass the flag along
+    }
