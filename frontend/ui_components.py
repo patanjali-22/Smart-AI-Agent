@@ -52,3 +52,42 @@ def display_chat_history():
     for message in st.session_state.messages:
         with st.chat_message(message["role"]):
             st.markdown(message["content"])
+
+def display_trace_events(trace_events: list):
+    """
+    Renders the detailed agent workflow trace in an expandable section.
+    Uses icons and conditional styling for better readability.
+    """
+    if trace_events:
+        with st.expander("🔬 Agent Workflow Trace"):
+            for event in trace_events:
+                icon_map = {
+                    'router': "➡️",
+                    'rag_lookup': "📚",
+                    'web_search': "🌐",
+                    'answer': "💡",
+                    '__end__': "✅"
+                }
+                icon = icon_map.get(event['node_name'], "⚙️")
+                
+                st.subheader(f"{icon} Step {event['step']}: {event['node_name']}")
+                st.write(f"**Description:** {event['description']}")
+                
+                if event['node_name'] == 'rag_lookup' and 'sufficiency_verdict' in event['details']:
+                    verdict = event['details']['sufficiency_verdict']
+                    if verdict == "Sufficient":
+                        st.success(f"**RAG Verdict:** {verdict} - Relevant info found in Knowledge Base.")
+                    else:
+                        st.warning(f"**RAG Verdict:** {verdict} - No sufficient info in Knowledge Base. Diverting to Web Search.")
+                    
+                    if 'retrieved_content_summary' in event['details']:
+                        st.markdown(f"**Retrieved Content Summary:** `{event['details']['retrieved_content_summary']}`")
+                elif event['node_name'] == 'web_search' and 'retrieved_content_summary' in event['details']:
+                    st.markdown(f"**Web Search Content Summary:** `{event['details']['retrieved_content_summary']}`")
+                elif event['node_name'] == 'router' and 'router_override_reason' in event['details']:
+                    st.info(f"**Router Override:** {event['details']['router_override_reason']}")
+                    st.json({"initial_decision": event['details']['initial_decision'], "final_decision": event['details']['final_decision']})
+                elif event['details']:
+                    st.json(event['details'])
+                
+                st.markdown("---")
